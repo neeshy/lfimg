@@ -1,0 +1,33 @@
+This project is loosely based on https://github.com/cirala/lfimg
+
+With the fork at https://github.com/neeshy/lf
+  * previews don't stick around upon the selection changing
+  * previews are properly regenerated even if the file has been selected in the
+    past
+A preview cache (located in ~/.cache/lf) has also been added
+
+Prerequisites:
+  For previews:
+    https://github.com/neeshy/lf
+    https://github.com/seebye/ueberzug
+    atool
+    poppler
+    djvulibre
+    pandoc
+    lynx
+    imagemagick / graphicsmagick
+    source-highlight / highlight / pygmentize
+    ffmpegthumbnailer
+  For the opener:
+    atool
+    zathura
+    libreoffice
+    firefox
+    lynx
+    inkscape
+    fluidsynth
+    mpv
+    mpvc (https://gitlab.com/mpv-ipc/mpvc)
+    flashplayer
+    sxiv
+    gimp

@@ -1,0 +1,136 @@
+#!/bin/sh
+redirect() {
+  exec </dev/null 1>&0 2>&0
+}
+
+fork() {
+  exec setsid -f -- "$@"
+}
+
+spawn() {
+  redirect
+  fork "$@"
+}
+
+if [ -n "$OPENER_CHOOSE" ]; then
+  choose() {
+    printf '%s\0' "$@" | fzf --read0 --no-sort --phony --layout=reverse
+  }
+else
+  choose() {
+    printf '%s' "$1"
+  }
+fi
+
+case "$1" in
+  *.7z|*.a|*.ace|*.alz|*.arc|*.arj|*.bz|*.bz2|*.cab|*.cpio|*.deb|*.gz|*.jar|\
+  *.lha|*.lrz|*.lz|*.lzh|*.lzma|*.lzo|*.rar|*.rpm|*.rz|*.t7z|*.tar|*.tbz|\
+  *.tbz2|*.tgz|*.tlz|*.txz|*.tZ|*.tzo|*.war|*.xz|*.Z|*.zip)
+    exec x "$@"
+    ;;
+  *.[1-8])
+    exec man -- "$@"
+    ;;
+  *.pdf|*.ps|*.eps|*.djvu|*.djv|*.epub|*.cb[zr7t])
+    if [ -n "$DISPLAY" ]; then
+      spawn zathura -- "$@"
+    fi
+    ;;
+  *.od[cbdfgipstm]|*.odft|*.ot[cgipsth]|*.do[ct]|*.do[ct]x|*.p[po]t|*.p[po]tx|\
+  *.xl[st]|*.xl[st]x)
+    if [ -n "$DISPLAY" ]; then
+      spawn libreoffice "$@"
+    fi
+    ;;
+  *.htm|*.html|*.xhtml)
+    if [ -n "$DISPLAY" ]; then
+      first="true"
+      for file; do
+        if [ -n "$first" ]; then
+          first=""
+          set -- "file://$file"
+        else
+          set -- "$@" "file://$file"
+        fi
+      done
+      spawn firefox -- "$@"
+    else
+      exec lynx -- "$@"
+    fi
+    ;;
+  *.svg)
+    if [ -n "$DISPLAY" ]; then
+      case "$(choose inkview inkscape)" in
+        inkview) spawn inkview -- "$@";;
+        inkscape) spawn inkscape -- "$@";;
+        *) exit;;
+      esac
+    fi
+    ;;
+  *.mid|*.midi)
+    exec fluidsynth -a alsa -m alsa_seq -l -i /usr/share/soundfonts/FluidR3_GM.sf2 -- "$@"
+    ;;
+  *.cue)
+    case "$(choose mpvc mpv)" in
+      mpvc) spawn mpvc playlist add "$@";;
+      mpv) exec mpv --no-audio-display -- "$@";;
+      *) exit;;
+    esac
+    ;;
+  *.swf)
+    if [ -n "$DISPLAY" ]; then
+      spawn sh -c '
+        for file; do
+          flashplayer "$file"
+        done' \
+        flashplayer "$@"
+    fi
+    ;;
+esac
+
+case "$(file -Lb --mime-type -- "$1")" in
+  image/*)
+    if [ -n "$DISPLAY" ]; then
+      case "$(choose sxiv gimp)" in
+        sxiv)
+          if [ "$#" -eq 1 ]; then
+            listfiles () {
+              find -L "$(dirname -- "$1")" -maxdepth 1 -type f -iregex \
+                '.*\(jpe?g\|bmp\|png\|gif\)$' -print0 | sort -z
+            }
+            count="$(listfiles "$1" | grep -m 1 -ZznF -- "$1" | cut -d: -f1)"
+            redirect
+            listfiles "$1" | fork xargs -0 sxiv -a -n "$count" --
+          else
+            spawn sxiv -a -- "$@"
+          fi
+          ;;
+        gimp) spawn gimp -- "$@";;
+        *) exit;;
+      esac
+    else
+      exec mvi -- "$@"
+    fi
+    ;;
+  audio/*|*/ogg)
+    case "$(choose mpvc mpv)" in
+      mpvc) spawn mpvc playlist add "$@";;
+      mpv) exec mpv --no-audio-display -- "$@";;
+      *) exit;;
+    esac
+    ;;
+  video/*)
+    if [ -n "$DISPLAY" ]; then
+      spawn mpv -- "$@"
+    else
+      exec mpv -- "$@"
+    fi
+    ;;
+  *)
+    case "$(choose editor pager)" in
+      editor) exec $EDITOR -- "$@";;
+      pager) exec $PAGER -- "$@";;
+      *) exit;;
+    esac
+    ;;
+esac
