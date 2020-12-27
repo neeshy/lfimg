@@ -1,83 +1,9 @@
-# set "-eu" options for shell commands
-# These options are used to have safer shell commands. Option '-e' is used to
-# exit on error and option '-u' is used to give error for unset variables.
-# Option '-f' disables pathname expansion which can be useful when $f, $fs, and
-# $fx variables contain names with '*' or '?' characters. However, this option
-# is used selectively within individual commands as it can be limiting at
-# times.
-set shellopts "-eu"
-
-# set internal field separator (IFS) to "\n" for shell commands
-# This is useful to automatically split file names in $fs and $fx properly
-# since default file separator used in these variables (i.e. 'filesep' option)
-# is newline. You need to consider the values of these options and create your
-# commands accordingly.
-set ifs "\n"
-
-# leave some space at the top and the bottom of the screen
-set scrolloff 8
-
-set info size
-set dircounts
-
 set previewer ~/.config/lf/pv
 set cleaner ~/.config/lf/cls
-
-# execute current file (must be executable)
-map x $$f
-map X !$f
-
-map gg
-map gh
-map g top
-map H cd ~
-
-map D delete
-map R $vidir -- $fx
-
-map [ push hkl
-map ] push hjl
 
 # define a custom 'open' command
 cmd open $$OPENER $fx
 cmd open-choose $OPENER_CHOOSE="true" $OPENER $fx
 # dedicated keys for file opener actions
-map <enter> open
 map o open
 map O open-choose
-
-cmd link %{{
-  set -- $(lf -remote load)
-  mode="$1"
-  shift
-  if [ "$#" -lt 1 ]; then
-    lf -remote "send $id echo no files to link"
-    exit 0
-  fi
-  # symbolically copy mode is indicating a soft link
-  if [ "$mode" = copy ]; then
-    ln -sr -t . -- "$@"
-  # while a move mode is indicating a hard link
-  elif [ "$mode" = move ]; then
-    ln -t . -- "$@"
-  fi
-}}
-map P :link
-
-cmd fzf ${{
-  res="$(fzf)"
-  if [ -d "$res" ]; then
-    cmd="cd"
-  else
-    cmd="select"
-  fi
-  lf -remote "send $id $cmd \"$res\""
-}}
-map <c-f> fzf
-
-cmd yank-dirname $dirname -- "$f" | tr -d '\n' | xsel -ib || true
-cmd yank-path $printf '%s' "$fx" | xsel -ib || true
-cmd yank-basename $basename -a -- $fx | head -c-1 | xsel -ib || true
-map Yd yank-dirname
-map Yp yank-path
-map Yb yank-basename

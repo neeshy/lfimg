@@ -5,10 +5,11 @@ Additional features
   * previews are properly regenerated even if the file has been selected in the past
   * preview images are cached in ~/.cache/lf
 
-Prerequisites:
+An example opener has also been included in this repository
+
+Requirements:
   For previews:
-    https://github.com/neeshy/lf
-    https://github.com/seebye/ueberzug
+    überzug (https://github.com/seebye/ueberzug)
     atool
     poppler
     djvulibre
