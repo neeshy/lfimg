@@ -1,10 +1,9 @@
 This project is loosely based on https://github.com/cirala/lfimg
 
-With the fork at https://github.com/neeshy/lf
+Additional features
   * previews don't stick around upon the selection changing
-  * previews are properly regenerated even if the file has been selected in the
-    past
-A preview cache (located in ~/.cache/lf) has also been added
+  * previews are properly regenerated even if the file has been selected in the past
+  * preview images are cached in ~/.cache/lf
 
 Prerequisites:
   For previews:
