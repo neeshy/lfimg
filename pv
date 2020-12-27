@@ -33,10 +33,12 @@ case "$1" in
   *.7z|*.a|*.ace|*.alz|*.arc|*.arj|*.bz|*.bz2|*.cab|*.cpio|*.deb|*.gz|*.jar|\
   *.lha|*.lrz|*.lz|*.lzh|*.lzma|*.lzo|*.rar|*.rpm|*.rz|*.t7z|*.tar|*.tbz|\
   *.tbz2|*.tgz|*.tlz|*.txz|*.tZ|*.tzo|*.war|*.xz|*.Z|*.zip)
-    exec als -- "$1"
+    als -- "$1"
+    exit 0
     ;;
   *.[1-8])
-    man -- "$1" | exec col -b
+    man -- "$1" | col -b
+    exit 0
     ;;
   *.pdf)
     if [ -n "$FIFO_UEBERZUG" ]; then
@@ -50,7 +52,8 @@ case "$1" in
         -- "$1" "$cache"
       draw "$cache.jpg"
     else
-      exec pdftotext -nopgbrk -q -- "$1" -
+      pdftotext -nopgbrk -q -- "$1" -
+      exit 0
     fi
     ;;
   *.djvu|*.djv)
@@ -61,14 +64,17 @@ case "$1" in
         - "$cache" <"$1"
       draw "$cache"
     else
-      exec djvutxt - <"$1"
+      djvutxt - <"$1"
+      exit 0
     fi
     ;;
   *.docx|*.odt|*.epub)
-    exec pandoc -s -t plain -- "$1"
+    pandoc -s -t plain -- "$1"
+    exit 0
     ;;
   *.htm|*.html|*.xhtml)
-    exec lynx -dump -- "$1"
+    lynx -dump -- "$1"
+    exit 0
     ;;
   *.svg)
     if [ -n "$FIFO_UEBERZUG" ]; then
@@ -85,7 +91,7 @@ case "$(file -Lb --mime-type -- "$1")" in
     #highlight -q -O ansi -- "$1" || cat -- "$1"
     #pygmentize -f terminal -- "$1" || cat -- "$1"
     source-highlight -q --outlang-def=esc.outlang --style-file=esc.style -i "$1" || cat -- "$1"
-    exit
+    exit 0
     ;;
   image/*)
     if [ -n "$FIFO_UEBERZUG" ]; then
@@ -126,3 +132,4 @@ else
 fi
 printf '\e[7m%s\e[0m\n' "$header"
 file -Lb -- "$1" | fold -s -w "$width"
+exit 0
