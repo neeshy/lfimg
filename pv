@@ -130,6 +130,6 @@ if [ "$len" -gt 0 ]; then
 else
   header="$header_text"
 fi
-printf '\e[7m%s\e[0m\n' "$header"
+printf '\033[7m%s\033[0m\n' "$header"
 file -Lb -- "$1" | fold -s -w "$width"
 exit 0
