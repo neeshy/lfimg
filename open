@@ -1,22 +1,23 @@
 #!/bin/sh
-set -e
-
-redirect() {
-  exec </dev/null 1>&0 2>&0
-}
-
-fork() {
-  exec setsid -f -- "$@"
-}
+set -euf
 
 spawn() {
-  redirect
-  fork "$@"
+  exec setsid -f -- "$@" </dev/null >&0 2>&0
 }
 
-if [ -n "$OPENER_CHOOSE" ]; then
+if [ -n "${TMUX-}" ]; then
+  execute() {
+    exec tmux new-window -a "$@"
+  }
+else
+  execute() {
+    exec "$@"
+  }
+fi
+
+if [ -n "${OPENER_CHOOSE-}" ]; then
   choose() {
-    printf '%s\0' "$@" | fzf --read0 --no-sort --phony --layout=reverse
+    printf '%s\0' "$@" | fzf --read0 --layout=reverse
   }
 else
   choose() {
@@ -25,45 +26,60 @@ else
 fi
 
 case "$1" in
-  *.7z|*.a|*.ace|*.alz|*.arc|*.arj|*.bz|*.bz2|*.cab|*.cpio|*.deb|*.gz|*.jar|\
-  *.lha|*.lrz|*.lz|*.lzh|*.lzma|*.lzo|*.rar|*.rpm|*.rz|*.t7z|*.tar|*.tbz|\
-  *.tbz2|*.tgz|*.tlz|*.txz|*.tZ|*.tzo|*.war|*.xz|*.Z|*.zip)
+  http://*|https://*)
+    if [ -n "${DISPLAY-}" ]; then
+      spawn firefox -- "$@"
+    else
+      exec lynx -- "$@"
+    fi
+    ;;
+esac
+
+for file; do
+  [ -e "$file" ]
+done
+
+ext="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+ext="${ext##*.}"
+case "$ext" in
+  7z|a|ace|alz|arc|arj|bz|bz2|cab|cpio|deb|gz|jar|\
+  lha|lrz|lz|lzh|lzma|lzo|rar|rpm|rz|t7z|tar|tbz|\
+  tbz2|tgz|tlz|txz|tZ|tzo|war|xz|Z|zip)
     for file; do
       aunpack -- "$file"
     done
     ;;
-  *.[1-8])
+  [1-8]|man)
     exec man -- "$@"
     ;;
-  *.pdf|*.ps|*.eps|*.djvu|*.djv|*.epub|*.cb[zr7t])
-    if [ -n "$DISPLAY" ]; then
+  pdf|ps|eps|djvu|djv|epub|cb[zr7t])
+    if [ -n "${DISPLAY-}" ]; then
       spawn zathura -- "$@"
     fi
     ;;
-  *.od[cbdfgipstm]|*.odft|*.ot[cgipsth]|*.do[ct]|*.do[ct]x|*.p[po]t|*.p[po]tx|\
-  *.xl[st]|*.xl[st]x)
-    if [ -n "$DISPLAY" ]; then
+  od[cbdfgipstm]|odft|ot[cgipsth]|do[ct]|do[ct]x|p[po]t|p[po]tx|\
+  xl[st]|xl[st]x)
+    if [ -n "${DISPLAY-}" ]; then
       spawn libreoffice "$@"
     fi
     ;;
-  *.htm|*.html|*.xhtml)
-    if [ -n "$DISPLAY" ]; then
+  htm|html|xhtml)
+    if [ -n "${DISPLAY-}" ]; then
       first="true"
       for file; do
         if [ -n "$first" ]; then
           first=""
-          set -- "file://$file"
-        else
-          set -- "$@" "file://$file"
+          set --
         fi
+        set -- "$@" "file://$file"
       done
       spawn firefox -- "$@"
     else
       exec lynx -- "$@"
     fi
     ;;
-  *.svg)
-    if [ -n "$DISPLAY" ]; then
+  svg)
+    if [ -n "${DISPLAY-}" ]; then
       case "$(choose inkview inkscape)" in
         inkview) spawn inkview -- "$@";;
         inkscape) spawn inkscape -- "$@";;
@@ -71,18 +87,18 @@ case "$1" in
       esac
     fi
     ;;
-  *.mid|*.midi)
-    exec fluidsynth -a alsa -m alsa_seq -l -i /usr/share/soundfonts/FluidR3_GM.sf2 -- "$@"
+  mid|midi)
+    exec fluidsynth -li -a alsa -m alsa_seq /usr/share/soundfonts/FluidR3_GM.sf2 -- "$@"
     ;;
-  *.cue)
-    case "$(choose mpvc mpv)" in
-      mpvc) spawn mpvc playlist add "$@";;
+  cue)
+    case "$(choose mpv mpvc)" in
       mpv) exec mpv --no-audio-display -- "$@";;
+      mpvc) spawn mpvc add -- "$@";;
       *) exit;;
     esac
     ;;
-  *.swf)
-    if [ -n "$DISPLAY" ]; then
+  swf)
+    if [ -n "${DISPLAY-}" ]; then
       spawn sh -c '
         for file; do
           flashplayer "$file"
@@ -92,49 +108,43 @@ case "$1" in
     ;;
 esac
 
-case "$(file -Lb --mime-type -- "$1")" in
+mime="$(file -Lb --mime-type -- "$1")"
+case "$mime" in
   image/*)
-    if [ -n "$DISPLAY" ]; then
-      case "$(choose sxiv gimp)" in
-        sxiv)
+    if [ -n "${DISPLAY-}" ]; then
+      case "$(choose nsxiv gimp)" in
+        nsxiv)
           if [ "$#" -eq 1 ]; then
-            listfiles () {
-              find -L "$(dirname -- "$1")" -maxdepth 1 -type f -iregex \
-                '.*\.\(jpe?g\|bmp\|png\|gif\)$' -print0 | sort -z
-            }
-            count="$(listfiles "$1" | grep -m 1 -ZznF -- "$1" | cut -d: -f1)"
-            redirect
-            listfiles "$1" | fork xargs -0 sxiv -a -n "$count" --
+            dir="$(readlink -f -- "$(dirname -- "$1")")"
+            n="$(find -L "$dir" -maxdepth 1 -type f -print0 | sort -z | grep -m 1 -ZznF -- "$1" | cut -d: -f1)"
+            spawn nsxiv -a -n "$n" -- "$dir"
           else
-            spawn sxiv -a -- "$@"
+            spawn nsxiv -a -- "$@"
           fi
           ;;
         gimp) spawn gimp -- "$@";;
         *) exit;;
       esac
-    else
-      exec mvi -- "$@"
     fi
     ;;
   audio/*|*/ogg)
-    case "$(choose mpvc mpv)" in
-      mpvc) spawn mpvc playlist add "$@";;
+    case "$(choose mpv mpvc)" in
       mpv) exec mpv --no-audio-display -- "$@";;
+      mpvc) spawn mpvc add -- "$@";;
       *) exit;;
     esac
     ;;
   video/*)
-    if [ -n "$DISPLAY" ]; then
+    if [ -n "${DISPLAY-}" ]; then
       spawn mpv -- "$@"
     else
       exec mpv -- "$@"
     fi
     ;;
-  *)
-    case "$(choose editor pager)" in
-      editor) exec $EDITOR -- "$@";;
-      pager) exec $PAGER -- "$@";;
-      *) exit;;
-    esac
-    ;;
+esac
+
+case "$(choose editor pager)" in
+  editor) execute $EDITOR -- "$@";;
+  pager) execute $PAGER -- "$@";;
+  *) exit;;
 esac
