@@ -102,8 +102,7 @@ case "$ext" in
       spawn sh -c '
         for file; do
           flashplayer "$file"
-        done' \
-        flashplayer "$@"
+        done' flashplayer "$@"
     fi
     ;;
 esac
@@ -116,7 +115,7 @@ case "$mime" in
         nsxiv)
           if [ "$#" -eq 1 ]; then
             dir="$(readlink -f -- "$(dirname -- "$1")")"
-            n="$(find -L "$dir" -maxdepth 1 -type f -print0 | sort -z | grep -m 1 -ZznF -- "$1" | cut -d: -f1)"
+            n="$(find -L "$dir" -maxdepth 1 -not -path '*/.*' -type f -print0 | sort -z | grep -znF -m 1 -- "$1" | cut -z -d: -f1 | head -c-1)"
             spawn nsxiv -a -n "$n" -- "$dir"
           else
             spawn nsxiv -a -- "$@"

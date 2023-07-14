@@ -4,8 +4,8 @@ set -euf
 draw() {
   jq -nc --argjson x "$x" --argjson y "$y" \
     --argjson width "$width" --argjson height "$height" \
-    --arg path "$path" \
-    '{
+    --arg path "$1" '
+    {
       "action": "add",
       "identifier": "preview",
       "x": $x,
@@ -54,7 +54,7 @@ case "$ext" in
     exit 0
     ;;
   [1-8])
-    man -- "$file" | col -b
+    COLUMNS="$width" man -- "$file" | col -b
     exit 0
     ;;
   pdf)

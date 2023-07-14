@@ -1,5 +1,5 @@
 Requirements:
-  überzug (https://github.com/seebye/ueberzug)
+  überzug (https://github.com/ueber-devel/ueberzug)
   jq
   atool
   poppler
