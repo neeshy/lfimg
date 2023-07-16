@@ -11,8 +11,14 @@ if [ -n "${DISPLAY-}" ]; then
 
   mkfifo -- "$FIFO_UEBERZUG"
   ueberzug layer -s <"$FIFO_UEBERZUG" &
+  pid="$!"
   exec 3>"$FIFO_UEBERZUG"
   trap cleanup EXIT
+
+  while waitpid "$pid"; do
+    ueberzug layer -s <"$FIFO_UEBERZUG" &
+    pid="$!"
+  done &
 
   if ! [ -d "$HOME/.cache/lf" ]; then
     mkdir -p -- "$HOME/.cache/lf"
