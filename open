@@ -114,8 +114,10 @@ case "$mime" in
       case "$(choose nsxiv gimp)" in
         nsxiv)
           if [ "$#" -eq 1 ] && [ "$(printf '%.1s' "$(basename -- "$1")")" != . ]; then
-            dir="$(readlink -f -- "$(dirname -- "$1")")"
-            n="$(find -L "$dir" -maxdepth 1 -not -path '*/.*' -type f -print0 | sort -z | grep -znF -m 1 -- "$1" | cut -s -d: -f1)"
+            file="$(realpath -s -- "$1")"
+            dir="$(dirname -- "$file")"
+            n="$(find -L "$dir" -maxdepth 1 -not -name '.*' -not -type d -print0 | sort -z |
+              file="$file" awk -vRS='\0' '$0 == ENVIRON["file"] {print NR; exit}')"
             spawn nsxiv -a -n "$n" -- "$dir"
           else
             spawn nsxiv -a -- "$@"
