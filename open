@@ -78,15 +78,6 @@ case "$ext" in
       exec lynx -- "$@"
     fi
     ;;
-  svg)
-    if [ -n "${DISPLAY-}" ]; then
-      case "$(choose inkview inkscape)" in
-        inkview) spawn inkview -- "$@";;
-        inkscape) spawn inkscape -- "$@";;
-        *) exit;;
-      esac
-    fi
-    ;;
   mid|midi)
     exec fluidsynth -li -a alsa -m alsa_seq /usr/share/soundfonts/FluidR3_GM.sf2 -- "$@"
     ;;
@@ -111,7 +102,7 @@ mime="$(file -Lb --mime-type -- "$1")"
 case "$mime" in
   image/*)
     if [ -n "${DISPLAY-}" ]; then
-      case "$(choose nsxiv gimp)" in
+      case "$(choose nsxiv gimp inkscape)" in
         nsxiv)
           if [ "$#" -eq 1 ] && [ "$(printf '%.1s' "$(basename -- "$1")")" != . ]; then
             file="$(realpath -s -- "$1")"
@@ -124,6 +115,7 @@ case "$mime" in
           fi
           ;;
         gimp) spawn gimp -- "$@";;
+        inkscape) spawn inkscape -- "$@";;
         *) exit;;
       esac
     fi
