@@ -40,6 +40,10 @@ for file; do
 done
 
 ext="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+case "$ext" in
+  *.7z.001) exec x "$@";;
+esac
+
 ext="${ext##*.}"
 case "$ext" in
   7z|a|ace|alz|arc|arj|bz|bz2|cab|cpio|deb|gz|jar|\
