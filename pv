@@ -1,10 +1,11 @@
 #!/bin/sh
 set -euf
+exec 2>/dev/null
 
 draw() {
   jq -nc --argjson x "$x" --argjson y "$y" \
     --argjson width "$width" --argjson height "$height" \
-    --arg path "$1" '
+    --arg path "$(readlink -f -- "$1")" '
     {
       "action": "add",
       "identifier": "preview",
@@ -51,12 +52,10 @@ case "$ext" in
   lha|lrz|lz|lzh|lzma|lzo|rar|rpm|rz|t7z|tar|tbz|\
   tbz2|tgz|tlz|txz|tZ|tzo|war|xz|Z|zip)
     als -- "$file"
-    exit 0
-    ;;
+    exit 0;;
   [1-8])
     COLUMNS="$width" man -- "$file" | col -b
-    exit 0
-    ;;
+    exit 0;;
   pdf)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       cache="$(hash "$file")"
@@ -71,8 +70,7 @@ case "$ext" in
     else
       pdftotext -nopgbrk -q -- "$file" -
       exit 0
-    fi
-    ;;
+    fi;;
   djvu|djv)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       cache="$(hash "$file").tiff"
@@ -83,32 +81,27 @@ case "$ext" in
     else
       djvutxt - <"$file"
       exit 0
-    fi
-    ;;
+    fi;;
   docx|odt|epub)
     pandoc -s -t plain -- "$file"
-    exit 0
-    ;;
+    exit 0;;
   htm|html|xhtml)
     lynx -dump -- "$file"
-    exit 0
-    ;;
+    exit 0;;
   svg)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       cache="$(hash "$file").jpg"
       cache "$cache"
       convert -- "$file" "$cache"
       draw "$cache"
-    fi
-    ;;
+    fi;;
 esac
 
 mime="$(file -Lb --mime-type -- "$file")"
 case "$mime" in
   text/*)
     source-highlight -q --outlang-def=esc.outlang --style-file=esc.style -i "$file" || cat -- "$file"
-    exit 0
-    ;;
+    exit 0;;
   image/*)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       orientation="$(identify -format '%[EXIF:Orientation]\n' -- "$file")"
@@ -120,16 +113,14 @@ case "$mime" in
       else
         draw "$file"
       fi
-    fi
-    ;;
+    fi;;
   video/*)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       cache="$(hash "$file").jpg"
       cache "$cache"
       ffmpegthumbnailer -i "$file" -o "$cache" -s 0
       draw "$cache"
-    fi
-    ;;
+    fi;;
 esac
 
 header_text="File Type Classification"

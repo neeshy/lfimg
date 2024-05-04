@@ -31,8 +31,7 @@ case "$1" in
       spawn firefox -- "$@"
     else
       exec lynx -- "$@"
-    fi
-    ;;
+    fi;;
 esac
 
 for file; do
@@ -51,22 +50,18 @@ case "$ext" in
   tbz2|tgz|tlz|txz|tZ|tzo|war|xz|Z|zip)
     for file; do
       aunpack -- "$file"
-    done
-    ;;
+    done;;
   [1-8]|man)
-    exec man -- "$@"
-    ;;
+    exec man -- "$@";;
   pdf|ps|eps|djvu|djv|epub|cb[zr7t])
     if [ -n "${DISPLAY-}" ]; then
       spawn zathura -- "$@"
-    fi
-    ;;
+    fi;;
   od[cbdfgipstm]|odft|ot[cgipsth]|do[ct]|do[ct]x|p[po]t|p[po]tx|\
   xl[st]|xl[st]x)
     if [ -n "${DISPLAY-}" ]; then
       spawn libreoffice "$@"
-    fi
-    ;;
+    fi;;
   htm|html|xhtml)
     if [ -n "${DISPLAY-}" ]; then
       first="true"
@@ -80,26 +75,22 @@ case "$ext" in
       spawn firefox -- "$@"
     else
       exec lynx -- "$@"
-    fi
-    ;;
+    fi;;
   mid|midi)
-    exec fluidsynth -li -a alsa -m alsa_seq /usr/share/soundfonts/FluidR3_GM.sf2 -- "$@"
-    ;;
+    exec fluidsynth -li -a alsa -m alsa_seq /usr/share/soundfonts/FluidR3_GM.sf2 -- "$@";;
   cue)
     case "$(choose mpv mpvc)" in
       mpv) exec mpv --no-audio-display -- "$@";;
       mpvc) spawn mpvc add -- "$@";;
       *) exit;;
-    esac
-    ;;
+    esac;;
   swf)
     if [ -n "${DISPLAY-}" ]; then
       spawn sh -c '
         for file; do
           flashplayer "$file"
         done' flashplayer "$@"
-    fi
-    ;;
+    fi;;
 esac
 
 mime="$(file -Lb --mime-type -- "$1")"
@@ -116,28 +107,24 @@ case "$mime" in
             spawn nsxiv -a -n "$n" -- "$dir"
           else
             spawn nsxiv -a -- "$@"
-          fi
-          ;;
+          fi;;
         gimp) spawn gimp -- "$@";;
         inkscape) spawn inkscape -- "$@";;
         *) exit;;
       esac
-    fi
-    ;;
+    fi;;
   audio/*|*/ogg)
     case "$(choose mpv mpvc)" in
       mpv) exec mpv --no-audio-display -- "$@";;
       mpvc) spawn mpvc add -- "$@";;
       *) exit;;
-    esac
-    ;;
+    esac;;
   video/*)
     if [ -n "${DISPLAY-}" ]; then
       spawn mpv -- "$@"
     else
       exec mpv -- "$@"
-    fi
-    ;;
+    fi;;
 esac
 
 case "$(choose editor pager)" in
