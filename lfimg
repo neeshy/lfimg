@@ -1,7 +1,7 @@
 #!/bin/sh
 set -euf
 
-if [ -n "${DISPLAY-}" ]; then
+if [ -n "${DISPLAY-}" ] && [ -z "${FIFO_UEBERZUG-}" ]; then
   export FIFO_UEBERZUG="${TMPDIR:-/tmp}/lf-ueberzug-$$"
 
   cleanup() {
@@ -14,9 +14,7 @@ if [ -n "${DISPLAY-}" ]; then
   exec 3>"$FIFO_UEBERZUG"
   trap cleanup EXIT
 
-  if ! [ -d "$HOME/.cache/lf" ]; then
-    mkdir -p -- "$HOME/.cache/lf"
-  fi
+  [ -d "$HOME/.cache/lf" ] || mkdir -p -- "$HOME/.cache/lf"
 
   lf "$@" 3>&-
 else

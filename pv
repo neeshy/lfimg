@@ -27,9 +27,7 @@ hash() {
 }
 
 cache() {
-  if [ -f "$1" ]; then
-    draw "$1"
-  fi
+  [ -f "$1" ] && draw "$1"
 }
 
 file="$1"
@@ -92,7 +90,7 @@ case "$ext" in
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       cache="$(hash "$file").jpg"
       cache "$cache"
-      convert -- "$file" "$cache"
+      magick -- "$file" "$cache"
       draw "$cache"
     fi;;
 esac
@@ -104,11 +102,11 @@ case "$mime" in
     exit 0;;
   image/*)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
-      orientation="$(identify -format '%[EXIF:Orientation]\n' -- "$file")"
+      orientation="$(magick identify -format '%[EXIF:Orientation]\n' -- "$file")"
       if [ -n "$orientation" ] && [ "$orientation" != 1 ]; then
         cache="$(hash "$file").jpg"
         cache "$cache"
-        convert -- "$file" -auto-orient "$cache"
+        magick -- "$file" -auto-orient "$cache"
         draw "$cache"
       else
         draw "$file"
