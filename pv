@@ -27,7 +27,12 @@ hash() {
 }
 
 cache() {
-  [ -f "$1" ] && draw "$1"
+  cache="$1"
+  if ! [ -f "$cache" ]; then
+    shift
+    "$@"
+  fi
+  draw "$cache"
 }
 
 file="$1"
@@ -36,9 +41,7 @@ height="$3"
 x="$4"
 y="$5"
 
-if ! [ -f "$file" ] && ! [ -h "$file" ]; then
-  exit
-fi
+[ -f "$file" ] || [ -h "$file" ]
 
 default_x="1920"
 default_y="1080"
@@ -49,49 +52,40 @@ case "$ext" in
   7z|a|ace|alz|arc|arj|bz|bz2|cab|cpio|deb|gz|jar|\
   lha|lrz|lz|lzh|lzma|lzo|rar|rpm|rz|t7z|tar|tbz|\
   tbz2|tgz|tlz|txz|tZ|tzo|war|xz|Z|zip)
-    als -- "$file"
-    exit 0;;
+    exec als -- "$file";;
   [1-8])
     COLUMNS="$width" man -- "$file" | col -b
-    exit 0;;
+    exit;;
   pdf)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       cache="$(hash "$file")"
-      cache "$cache.jpg"
-      pdftoppm -f 1 -l 1 \
-        -scale-to-x "$default_x" \
-        -scale-to-y -1 \
-        -singlefile \
-        -jpeg \
-        -- "$file" "$cache"
-      draw "$cache.jpg"
+      cache "$cache.jpg" \
+        pdftoppm -f 1 -l 1 \
+          -scale-to-x "$default_x" \
+          -scale-to-y -1 \
+          -singlefile \
+          -jpeg \
+          -- "$file" "$cache"
     else
-      pdftotext -nopgbrk -q -- "$file" -
-      exit 0
+      exec pdftotext -nopgbrk -q -- "$file" -
     fi;;
   djvu|djv)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       cache="$(hash "$file").tiff"
-      cache "$cache"
-      ddjvu -format=tiff -quality=90 -page=1 -size="${default_x}x${default_y}" \
-        - "$cache" <"$file"
-      draw "$cache"
+      cache "$cache" \
+        ddjvu -format=tiff -quality=90 -page=1 \
+          -size="${default_x}x${default_y}" "$file" "$cache"
     else
-      djvutxt - <"$file"
-      exit 0
+      exec djvutxt - <"$file"
     fi;;
   docx|odt|epub)
-    pandoc -s -t plain -- "$file"
-    exit 0;;
+    exec pandoc -s -t plain -- "$file";;
   htm|html|xhtml)
-    lynx -dump -- "$file"
-    exit 0;;
+    exec lynx -dump -- "$file";;
   svg)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       cache="$(hash "$file").jpg"
-      cache "$cache"
-      magick -- "$file" "$cache"
-      draw "$cache"
+      cache "$cache" magick -- "$file" "$cache"
     fi;;
 esac
 
@@ -99,15 +93,13 @@ mime="$(file -Lb --mime-type -- "$file")"
 case "$mime" in
   text/*)
     source-highlight -q --outlang-def=esc.outlang --style-file=esc.style -i "$file" || cat -- "$file"
-    exit 0;;
+    exit;;
   image/*)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       orientation="$(magick identify -format '%[EXIF:Orientation]\n' -- "$file")"
       if [ -n "$orientation" ] && [ "$orientation" != 1 ]; then
         cache="$(hash "$file").jpg"
-        cache "$cache"
-        magick -- "$file" -auto-orient "$cache"
-        draw "$cache"
+        cache "$cache" magick -- "$file" -auto-orient "$cache"
       else
         draw "$file"
       fi
@@ -115,9 +107,7 @@ case "$mime" in
   video/*)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       cache="$(hash "$file").jpg"
-      cache "$cache"
-      ffmpegthumbnailer -i "$file" -o "$cache" -s 0
-      draw "$cache"
+      cache "$cache" ffmpegthumbnailer -i "$file" -o "$cache" -s 0
     fi;;
 esac
 
@@ -137,4 +127,3 @@ else
 fi
 printf '\033[7m%s\033[0m\n' "$header"
 file -Lb -- "$file" | fold -s -w "$width"
-exit 0
