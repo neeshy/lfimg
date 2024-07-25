@@ -1,26 +1,29 @@
 Requirements:
   überzug (https://github.com/ueber-devel/ueberzug)
   jq
-  atool
+  ouch
   poppler
   djvulibre
   pandoc
   lynx
-  imagemagick
   source-highlight
+  imagemagick
   ffmpegthumbnailer
 
 An example opener has also been included in this repository
 Opener requirements:
-  atool
+  tmux
+  fzf
+  ouch
   zathura
   libreoffice
   firefox
   lynx
+  deluge
+  nsxiv
+  gimp
   inkscape
   fluidsynth
   mpv
   mpvc (https://github.com/neeshy/mpvc)
   flashplayer
-  nsxiv
-  gimp

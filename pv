@@ -22,13 +22,17 @@ draw() {
 }
 
 hash() {
-  printf '%s/.cache/lf/%s' "$HOME" \
-    "$(stat --printf '%n\0%i\0%F\0%s\0%W\0%Y' -- "$(readlink -f -- "$1")" | sha256sum | cut -d' ' -f1)"
+  hash="$(stat --printf '%n\0%i\0%F\0%s\0%W\0%Y' -- "$(readlink -f -- "$1")" | sha256sum | cut -d' ' -f1)"
+  dir="$(printf '%s' "$hash" | cut -c1-2)"
+  name="$(printf '%s' "$hash" | cut -c3-)"
+  cache="$HOME/.cache/lf/$dir/$name"
 }
 
 cache() {
-  cache="$1"
+  cache="$cache.$1"
   if ! [ -f "$cache" ]; then
+    dir="$(dirname -- "$cache")"
+    [ -d "$dir" ] || mkdir -p -- "$dir"
     shift
     "$@"
   fi
@@ -46,20 +50,26 @@ y="$5"
 default_x="1920"
 default_y="1080"
 
-ext="$(printf '%s' "$file" | tr '[:upper:]' '[:lower:]')"
-ext="${ext##*.}"
-case "$ext" in
-  7z|a|ace|alz|arc|arj|bz|bz2|cab|cpio|deb|gz|jar|\
-  lha|lrz|lz|lzh|lzma|lzo|rar|rpm|rz|t7z|tar|tbz|\
-  tbz2|tgz|tlz|txz|tZ|tzo|war|xz|Z|zip)
-    exec als -- "$file";;
-  [1-8])
-    COLUMNS="$width" man -- "$file" | col -b
-    exit;;
-  pdf)
+mime="$(file -Lb --mime-type -- "$file")"
+case "$mime" in
+  application/gzip|\
+  application/x-bzip2|\
+  application/x-xz|\
+  application/x-lzma|\
+  application/x-lz4|\
+  application/zstd|\
+  application/x-snappy-framed|\
+  application/x-tar|\
+  application/x-gtar|\
+  application/x-ustar|\
+  application/zip|\
+  application/x-7z-compressed|\
+  application/x-rar)
+    exec ouch list -t "$file";;
+  application/pdf)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
-      cache="$(hash "$file")"
-      cache "$cache.jpg" \
+      hash "$file"
+      cache jpg \
         pdftoppm -f 1 -l 1 \
           -scale-to-x "$default_x" \
           -scale-to-y -1 \
@@ -68,62 +78,70 @@ case "$ext" in
           -- "$file" "$cache"
     else
       exec pdftotext -nopgbrk -q -- "$file" -
-    fi;;
-  djvu|djv)
+    fi
+    ;;
+  image/vnd.djvu)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
-      cache="$(hash "$file").tiff"
-      cache "$cache" \
+      hash "$file"
+      cache tiff \
         ddjvu -format=tiff -quality=90 -page=1 \
-          -size="${default_x}x${default_y}" "$file" "$cache"
+          -size="${default_x}x${default_y}" "$file" "$cache.tiff"
     else
       exec djvutxt - <"$file"
-    fi;;
-  docx|odt|epub)
+    fi
+    ;;
+  application/vnd.openxmlformats-officedocument.wordprocessingml.document|\
+  application/vnd.oasis.opendocument.text|\
+  application/epub+zip|\
+  text/rtf)
     exec pandoc -s -t plain -- "$file";;
-  htm|html|xhtml)
-    exec lynx -dump -- "$file";;
-  svg)
+  text/troff)
+    COLUMNS="$width" man -- "$file" | col -b; exit;;
+  text/html)
+    exec lynx -width="$width" -dump -- "$file";;
+  text/*|application/javascript|application/json)
+    source-highlight -q --outlang-def=esc.outlang --style-file=esc.style -i "$file" || cat -- "$file"; exit;;
+  image/svg+xml)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
-      cache="$(hash "$file").jpg"
-      cache "$cache" magick -- "$file" "$cache"
-    fi;;
-esac
-
-mime="$(file -Lb --mime-type -- "$file")"
-case "$mime" in
-  text/*)
-    source-highlight -q --outlang-def=esc.outlang --style-file=esc.style -i "$file" || cat -- "$file"
-    exit;;
+      hash "$file"
+      cache jpg magick -- "$file" "$cache.jpg"
+    fi
+    ;;
   image/*)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
-      orientation="$(magick identify -format '%[EXIF:Orientation]\n' -- "$file")"
-      if [ -n "$orientation" ] && [ "$orientation" != 1 ]; then
-        cache="$(hash "$file").jpg"
-        cache "$cache" magick -- "$file" -auto-orient "$cache"
+      # ueberzug doesn't handle image orientation correctly
+      orientation="$(magick identify -format '%[orientation]\n' -- "$file")"
+      if [ -n "$orientation" ] \
+          && [ "$orientation" != Undefined ] \
+          && [ "$orientation" != TopLeft ]; then
+        hash "$file"
+        cache jpg magick -- "$file" -auto-orient "$cache.jpg"
       else
         draw "$file"
       fi
-    fi;;
+    fi
+    ;;
   video/*)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
-      cache="$(hash "$file").jpg"
-      cache "$cache" ffmpegthumbnailer -i "$file" -o "$cache" -s 0
-    fi;;
+      hash "$file"
+      cache jpg ffmpegthumbnailer -i "$file" -o "$cache.jpg" -s 0
+    fi
+    ;;
 esac
 
-header_text="File Type Classification"
-header=""
-len="$(( (width - (${#header_text} + 2)) / 2 ))"
+header="File Type Classification"
+# lf incorrectly reports the width + 2
+: "$((width -= 2))"
+padding="$((width - ${#header}))"
+len="$((padding / 2 - 2))"
 if [ "$len" -gt 0 ]; then
+  header=" $header "
   for i in $(seq "$len"); do
-    header="-$header"
+    header="─$header─"
   done
-  header="$header $header_text "
-  for i in $(seq "$len"); do
-    header="$header-"
-  done
-else
-  header="$header_text"
+  if [ "$((padding % 2))" -eq 1 ]; then
+    header="$header─"
+  fi
 fi
-printf '\033[7m%s\033[0m\n' "$header"
+printf '\033[7m %s \033[0m\n' "$header"
 file -Lb -- "$file" | fold -s -w "$width"

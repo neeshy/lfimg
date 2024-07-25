@@ -7,7 +7,7 @@ spawn() {
 
 if [ -n "${TMUX-}" ]; then
   execute() {
-    exec tmux new-window -a "$@"
+    exec tmux new-window -a -- "$@"
   }
 else
   execute() {
@@ -17,7 +17,9 @@ fi
 
 if [ -n "${OPENER_CHOOSE-}" ]; then
   choose() {
-    printf '%s\0' "$@" | fzf --read0 --layout=reverse
+    printf '%s\n' "$@" | fzf \
+      --no-sort --disabled --layout=reverse \
+      --bind=change:clear-query,j:down,k:up
   }
 else
   choose() {
@@ -26,43 +28,110 @@ else
 fi
 
 case "$1" in
+  file://*)
+    for file; do
+      tmux new-window -a -- lf -- "${file#file://}"
+    done
+    exit
+    ;;
   http://*|https://*)
     if [ -n "${DISPLAY-}" ]; then
       spawn firefox -- "$@"
     else
       exec lynx -- "$@"
-    fi;;
+    fi
+    ;;
+  magnet:*)
+    deluged >/dev/null 2>&1 || :
+    spawn deluge console add -- "$@"
+    ;;
 esac
 
 for file; do
   [ -e "$file" ]
 done
 
-ext="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
-case "$ext" in
-  *.7z.001) exec x "$@";;
-esac
+extension() {
+  ext="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  ext="${ext##*.}"
+}
 
-ext="${ext##*.}"
-case "$ext" in
-  7z|a|ace|alz|arc|arj|bz|bz2|cab|cpio|deb|gz|jar|\
-  lha|lrz|lz|lzh|lzma|lzo|rar|rpm|rz|t7z|tar|tbz|\
-  tbz2|tgz|tlz|txz|tZ|tzo|war|xz|Z|zip)
+mime() {
+  mime="$(file -Lb --mime-type -- "$1")"
+  case "$mime" in
+    application/zip)
+      extension; [ "$ext" = cbz ] && mime="application/vnd.comicbook+zip";;
+    application/x-rar)
+      extension; [ "$ext" = cbr ] && mime="application/vnd.comicbook+rar";;
+    application/x-7z-compressed)
+      extension; [ "$ext" = cb7 ] && mime="application/vnd.comicbook+7z";;
+    application/x-tar|\
+    application/x-gtar|\
+    application/x-ustar)
+      extension; [ "$ext" = cbt ] && mime="application/vnd.comicbook+tar";;
+    text/plain)
+      extension; [ "$ext" = cue ] && mime="application/x-cue";;
+  esac
+  :
+}
+
+mime "$1"
+case "$mime" in
+  inode/directory)
     for file; do
-      aunpack -- "$file"
-    done;;
-  [1-8]|man)
-    exec man -- "$@";;
-  pdf|ps|eps|djvu|djv|epub|cb[zr7t])
+      tmux new-window -a -- lf -- "$file"
+    done
+    exit
+    ;;
+  application/gzip|\
+  application/x-bzip2|\
+  application/x-xz|\
+  application/x-lzma|\
+  application/x-lz4|\
+  application/zstd|\
+  application/x-snappy-framed|\
+  application/x-tar|\
+  application/x-gtar|\
+  application/x-ustar|\
+  application/zip|\
+  application/x-7z-compressed|\
+  application/x-rar)
+    exec ouch decompress "$@";;
+  application/pdf|\
+  application/postscript|\
+  image/x-eps|\
+  image/vnd.djvu|\
+  application/epub+zip|\
+  application/vnd.comicbook+zip|\
+  application/vnd.comicbook+rar|\
+  application/vnd.comicbook+7z|\
+  application/vnd.comicbook+tar)
     if [ -n "${DISPLAY-}" ]; then
       spawn zathura -- "$@"
-    fi;;
-  od[cbdfgipstm]|odft|ot[cgipsth]|do[ct]|do[ct]x|p[po]t|p[po]tx|\
-  xl[st]|xl[st]x)
+    fi
+    ;;
+  application/vnd.oasis.opendocument.*|\
+  application/vnd.openofficeorg.extension|\
+  application/vnd.openxmlformats-officedocument.*|\
+  application/vnd.ms-visio.drawing.main+xml|\
+  application/msword|\
+  application/vnd.ms-powerpoint|\
+  application/vnd.ms-excel|\
+  application/vnd.ms-publisher|\
+  application/vnd.ms-works|\
+  application/vnd.visio|\
+  application/vnd.sun.xml.*|\
+  application/vnd.stardivision.*|\
+  application/x-star*|\
+  application/x-mswrite|\
+  text/rtf)
     if [ -n "${DISPLAY-}" ]; then
       spawn libreoffice "$@"
-    fi;;
-  htm|html|xhtml)
+    fi
+    ;;
+  text/troff)
+    exec man -- "$@";;
+  text/html)
     if [ -n "${DISPLAY-}" ]; then
       first="true"
       for file; do
@@ -70,31 +139,13 @@ case "$ext" in
           first=""
           set --
         fi
-        set -- "$@" "file://$file"
+        set -- "$@" "file://$(urlencode "$file")"
       done
       spawn firefox -- "$@"
     else
       exec lynx -- "$@"
-    fi;;
-  mid|midi)
-    exec fluidsynth -li -a alsa -m alsa_seq /usr/share/soundfonts/FluidR3_GM.sf2 -- "$@";;
-  cue)
-    case "$(choose mpv mpvc)" in
-      mpv) exec mpv --no-audio-display -- "$@";;
-      mpvc) spawn mpvc add -- "$@";;
-      *) exit;;
-    esac;;
-  swf)
-    if [ -n "${DISPLAY-}" ]; then
-      spawn sh -c '
-        for file; do
-          flashplayer "$file"
-        done' flashplayer "$@"
-    fi;;
-esac
-
-mime="$(file -Lb --mime-type -- "$1")"
-case "$mime" in
+    fi
+    ;;
   image/*)
     if [ -n "${DISPLAY-}" ]; then
       case "$(choose nsxiv gimp inkscape)" in
@@ -107,24 +158,36 @@ case "$mime" in
             spawn nsxiv -a -n "$n" -- "$dir"
           else
             spawn nsxiv -a -- "$@"
-          fi;;
+          fi
+          ;;
         gimp) spawn gimp -- "$@";;
         inkscape) spawn inkscape -- "$@";;
         *) exit;;
       esac
-    fi;;
-  audio/*|*/ogg)
+    fi
+    ;;
+  audio/*|*/ogg|application/x-cue)
     case "$(choose mpv mpvc)" in
       mpv) exec mpv --no-audio-display -- "$@";;
       mpvc) spawn mpvc add -- "$@";;
       *) exit;;
-    esac;;
+    esac
+    ;;
   video/*)
     if [ -n "${DISPLAY-}" ]; then
       spawn mpv -- "$@"
     else
       exec mpv -- "$@"
-    fi;;
+    fi
+    ;;
+  application/x-shockwave-flash)
+    if [ -n "${DISPLAY-}" ]; then
+      spawn sh -c '
+        for file; do
+          flashplayer "$file"
+        done' flashplayer "$@"
+    fi
+    ;;
 esac
 
 case "$(choose editor pager)" in
