@@ -60,17 +60,17 @@ mime() {
   mime="$(file -Lb --mime-type -- "$1")"
   case "$mime" in
     application/zip)
-      extension; [ "$ext" = cbz ] && mime="application/vnd.comicbook+zip";;
+      extension "$1"; [ "$ext" = cbz ] && mime="application/vnd.comicbook+zip";;
     application/x-rar)
-      extension; [ "$ext" = cbr ] && mime="application/vnd.comicbook+rar";;
+      extension "$1"; [ "$ext" = cbr ] && mime="application/vnd.comicbook+rar";;
     application/x-7z-compressed)
-      extension; [ "$ext" = cb7 ] && mime="application/vnd.comicbook+7z";;
+      extension "$1"; [ "$ext" = cb7 ] && mime="application/vnd.comicbook+7z";;
     application/x-tar|\
     application/x-gtar|\
     application/x-ustar)
-      extension; [ "$ext" = cbt ] && mime="application/vnd.comicbook+tar";;
+      extension "$1"; [ "$ext" = cbt ] && mime="application/vnd.comicbook+tar";;
     text/plain)
-      extension; [ "$ext" = cue ] && mime="application/x-cue";;
+      extension "$1"; [ "$ext" = cue ] && mime="application/x-cue";;
   esac
   :
 }
