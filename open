@@ -38,7 +38,7 @@ case "$1" in
     if [ -n "${DISPLAY-}" ]; then
       spawn firefox -- "$@"
     else
-      exec lynx -- "$@"
+      execute lynx -- "$@"
     fi
     ;;
   magnet:*)
@@ -143,7 +143,7 @@ case "$mime" in
       done
       spawn firefox -- "$@"
     else
-      exec lynx -- "$@"
+      execute lynx -- "$@"
     fi
     ;;
   image/*)
