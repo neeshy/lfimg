@@ -1,3 +1,5 @@
 #!/bin/sh
 set -euf
-[ -n "${FIFO_UEBERZUG-}" ] && printf '{"action":"remove","identifier":"preview"}\n' >"$FIFO_UEBERZUG"
+if [ -n "${FIFO_UEBERZUG-}" ]; then
+  printf '{"action":"remove","identifier":"preview"}\n' >"$FIFO_UEBERZUG"
+fi
