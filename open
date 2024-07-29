@@ -19,7 +19,14 @@ if [ -n "${OPENER_CHOOSE-}" ]; then
   choose() {
     printf '%s\n' "$@" | fzf \
       --no-sort --disabled --layout=reverse \
-      --bind=change:clear-query,j:down,k:up
+      --no-info --prompt="Open With > " \
+      --bind=change:clear-query \
+      --bind=q:abort \
+      --bind=j:down,k:up \
+      --bind=d:half-page-down,u:half-page-up \
+      --bind=space:page-down,backspace:page-up \
+      --bind=g:first,G:last \
+      --bind=f:jump,jump:accept
   }
 else
   choose() {
