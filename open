@@ -19,7 +19,7 @@ if [ -n "${OPENER_CHOOSE-}" ]; then
   choose() {
     printf '%s\n' "$@" | fzf \
       --no-sort --disabled --layout=reverse \
-      --no-info --prompt="Open With > " \
+      --no-info --prompt="Open with > " \
       --bind=change:clear-query \
       --bind=q:abort \
       --bind=j:down,k:up \
@@ -137,7 +137,7 @@ case "$mime" in
     fi
     ;;
   text/troff)
-    exec man -- "$@";;
+    exec man -l -- "$@";;
   text/html)
     if [ -n "${DISPLAY-}" ]; then
       first="true"

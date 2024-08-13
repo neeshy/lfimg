@@ -99,8 +99,10 @@ case "$mime" in
     COLUMNS="$width" man -- "$file" | col -b; exit;;
   text/html)
     exec lynx -width="$width" -dump -- "$file";;
-  text/*|application/javascript|application/json)
-    source-highlight -q --outlang-def=esc.outlang --style-file=esc.style -i "$file" || cat -- "$file"; exit;;
+  application/json)
+    exec jq -C <"$file";;
+  text/*|application/javascript)
+    exec bat --color=always -- "$file";;
   image/svg+xml)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       hash "$file"
@@ -110,12 +112,12 @@ case "$mime" in
   image/*)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       # ueberzug doesn't handle image orientation correctly
-      orientation="$(magick identify -format '%[orientation]\n' -- "$file")"
+      orientation="$(magick identify -format '%[orientation]\n' -- "$file[0]")"]
       if [ -n "$orientation" ] \
           && [ "$orientation" != Undefined ] \
           && [ "$orientation" != TopLeft ]; then
         hash "$file"
-        cache jpg magick -- "$file" -auto-orient "$cache.jpg"
+        cache jpg magick -- "$file[0]" -auto-orient "$cache.jpg"
       else
         draw "$file"
       fi

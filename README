@@ -6,7 +6,7 @@ Requirements:
   djvulibre
   pandoc
   lynx
-  source-highlight
+  bat
   imagemagick
   ffmpegthumbnailer
 
