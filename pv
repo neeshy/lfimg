@@ -112,7 +112,7 @@ case "$mime" in
   image/*)
     if [ -n "${FIFO_UEBERZUG-}" ]; then
       # ueberzug doesn't handle image orientation correctly
-      orientation="$(magick identify -format '%[orientation]\n' -- "$file[0]")"]
+      orientation="$(magick identify -format '%[orientation]\n' -- "$file[0]")"
       if [ -n "$orientation" ] \
           && [ "$orientation" != Undefined ] \
           && [ "$orientation" != TopLeft ]; then
