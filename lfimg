@@ -13,7 +13,7 @@ if [ -n "${DISPLAY-}" ] && [ -z "${FIFO_UEBERZUG-}" ]; then
   # Execute ueberzug in a loop in case it crashes. Ueberzug dies if its
   # associated window is closed. This breaks image previews when using tmux and
   # reattaching to an existing session.
-  while ! ueberzug layer -s <"$FIFO_UEBERZUG"; do :; done &
+  while [ -p "$FIFO_UEBERZUG" ] && ! ueberzug layer -s <"$FIFO_UEBERZUG"; do :; done &
   # Open the FIFO for writing. FIFO readers receive an EOF once all writers
   # have closed their respective file descriptors. Holding a file descriptor
   # will effectively keep ueberzug alive as long as lf lives.
